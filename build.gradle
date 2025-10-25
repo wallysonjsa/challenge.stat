@@ -2,11 +2,12 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.6'
 	id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
 
 group = 'challenge.stat'
 version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
+description = 'Challenge Statistics'
 
 java {
 	toolchain {
@@ -21,11 +22,66 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.20.0")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0")
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+jacoco {
+    toolVersion = "0.8.12"
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+jacocoTestReport{
+    dependsOn test
+    reports {
+        xml.required = true
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('reports/jacoco/test/html')
+    }
+
+    classDirectories.setFrom(files(classDirectories.files.collect{
+        fileTree(dir: it, excludes:[
+                '**/*Application.*',
+                '**/model/**',
+                '**/dto/**'
+        ])
+    }))
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+
+    violationRules {
+        rule {
+            element = 'BUNDLE'
+
+            excludes = [
+                '**/*Application.*',
+                '**/model/**',
+                '**/dto/**'
+            ]
+
+            limit {
+                counter = 'LINE'
+                minimum = 0.4
+            }
+
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.7
+            }
+        }
+    }
+}
+
+test {
+    finalizedBy jacocoTestReport
+}
+
+check.dependsOn jacocoTestCoverageVerification
